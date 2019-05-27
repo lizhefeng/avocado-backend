@@ -7,6 +7,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	// ReviewTableName is the table name of review history
+	ReviewTableName = "review"
+)
+
 var (
 	// ErrNotExist indicates certain item does not exist in Blockchain database
 	ErrNotExist = errors.New("not exist in DB")
@@ -22,17 +27,17 @@ type Protocol interface {
 	ReviewHandler
 }
 
-// BlockHandler ishte interface of handling block
+// ReviewHandler ishte interface of handling reviews
 type ReviewHandler interface {
 	PutReview(context.Context, *sql.Tx, *Review) error
 }
 
 // Review defines the structure of reviews
 type Review struct {
-	ReviewID uint64
-	UserID   uint64
-	ArtID    uint64
-	Text     string
+	ReviewID  uint64
+	UserID    uint64
+	ArtID     uint64
+	Text      string
 	TimeStamp uint64
 	Upvotes   uint64
 }

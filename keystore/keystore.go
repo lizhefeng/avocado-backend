@@ -10,15 +10,15 @@ import (
 	s "github.com/lizhefeng/avocado-backend/sql"
 )
 
-// Keystore handles front end requests
+// KeyStore handles front end requests
 type KeyStore struct {
-	store      s.Store
-	registry   *protocol.Registry
+	store    s.Store
+	registry *protocol.Registry
 }
 
 // Config contains indexer configs
 type Config struct {
-	DBPath                string `yaml:"dbPath"`
+	DBPath string `yaml:"dbPath"`
 }
 
 // NewKeyStore creates a new keystore
