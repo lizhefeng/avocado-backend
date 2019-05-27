@@ -1,0 +1,29 @@
+schema {
+    query: Query
+    mutation: Mutation
+}
+
+type Query {
+    review(id: Int!): Review
+}
+
+type Mutation {
+    createReview(review: ReviewInput): Review
+}
+
+type Review {
+    reviewID: Int!
+    userID: Int!
+    artID: Int!
+    text: String!
+    timestamp: Int!
+    upvotes: Int!
+}
+
+input ReviewInput {
+    userID: Int!
+    artID: Int!
+    text: String!
+    timestamp: Int!
+    upvotes: Int!
+}

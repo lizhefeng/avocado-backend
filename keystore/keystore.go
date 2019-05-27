@@ -2,11 +2,11 @@ package keystore
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/pkg/errors"
 
 	"github.com/lizhefeng/avocado-backend/protocol"
+	"github.com/lizhefeng/avocado-backend/protocol/albums"
 	s "github.com/lizhefeng/avocado-backend/sql"
 )
 
@@ -31,7 +31,10 @@ func NewKeyStore(store s.Store) *KeyStore {
 
 // Start starts the keystore
 func (ks *KeyStore) Start(ctx context.Context) error {
-	return ks.store.Start(ctx)
+	if err := ks.store.Start(ctx); err != nil {
+		return errors.Wrap(err, "failed to start db")
+	}
+	return ks.CreateTablesIfNotExist()
 }
 
 // Stop stops the indexer
@@ -39,13 +42,41 @@ func (ks *KeyStore) Stop(ctx context.Context) error {
 	return ks.store.Stop(ctx)
 }
 
+// CreateTablesIfNotExist creates tables in local database
+func (ks *KeyStore) CreateTablesIfNotExist() error {
+	for _, p := range ks.registry.All() {
+		if err := p.CreateTables(context.Background()); err != nil {
+			return errors.Wrap(err, "failed to create a table")
+		}
+	}
+	return nil
+}
+
+// RegisterProtocol registers a protocol to the indexer
+func (ks *KeyStore) RegisterProtocol(protocolID string, protocol protocol.Protocol) error {
+	return ks.registry.Register(protocolID, protocol)
+}
+
+// RegisterDefaultProtocols registers default protocols to the keystore
+func (ks *KeyStore) RegisterDefaultProtocols() error {
+	albumsProtocol := albums.NewProtocol(ks.store)
+	return ks.RegisterProtocol(albums.ProtocolID, albumsProtocol)
+}
+
 // PutReview inserts a new review into the underlying db
-func (ks *KeyStore) PutReview(ctx context.Context, protocolID string, review *protocol.Review) error {
+func (ks *KeyStore) PutReview(ctx context.Context, protocolID string, reviewInput *protocol.ReviewInput) (*protocol.Review, error) {
 	p, ok := ks.registry.Find(protocolID)
 	if !ok {
-		return errors.New("protocol is unregistered")
+		return nil, errors.New("protocol is unregistered")
 	}
-	return ks.store.Transact(func(tx *sql.Tx) error {
-		return p.PutReview(ctx, tx, review)
-	})
+	return p.PutReview(ctx, reviewInput)
+}
+
+// GetReview gets a review from the underlying db
+func (ks *KeyStore) GetReview(protocolID string, reviewID uint64) (*protocol.Review, error) {
+	p, ok := ks.registry.Find(protocolID)
+	if !ok {
+		return nil, errors.New("protocol is unregistered")
+	}
+	return p.GetReview(reviewID)
 }

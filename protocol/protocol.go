@@ -2,8 +2,6 @@ package protocol
 
 import (
 	"context"
-	"database/sql"
-
 	"github.com/pkg/errors"
 )
 
@@ -29,12 +27,22 @@ type Protocol interface {
 
 // ReviewHandler ishte interface of handling reviews
 type ReviewHandler interface {
-	PutReview(context.Context, *sql.Tx, *Review) error
+	PutReview(context.Context, *ReviewInput) (*Review, error)
+	GetReview(uint64) (*Review, error)
 }
 
 // Review defines the structure of reviews
 type Review struct {
 	ReviewID  uint64
+	UserID    uint64
+	ArtID     uint64
+	Text      string
+	TimeStamp uint64
+	Upvotes   uint64
+}
+
+// ReviewInput defines the structure of review input
+type ReviewInput struct {
 	UserID    uint64
 	ArtID     uint64
 	Text      string

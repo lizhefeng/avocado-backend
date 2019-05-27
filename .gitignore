@@ -1,4 +1,6 @@
 .idea/*
+bin/*
+*.db
 # Binaries for programs and plugins
 *.exe
 *.exe~

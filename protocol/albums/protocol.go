@@ -30,22 +30,47 @@ func NewProtocol(store s.Store) *Protocol {
 func (p *Protocol) CreateTables(ctx context.Context) error {
 	// create review table
 	if _, err := p.Store.GetDB().Exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s "+
-		"([review_ID] BIGINT NOT NULL UNIQUE, [user_ID] BIGINT NOT NULL, [art_ID] BIGINT NOT NULL, [text] TEXT NOT NULL, "+
-		"[timestamp] BIGINT NOT NULL, [upvotes] BIGINT NOT NULL", protocol.ReviewTableName)); err != nil {
+		"([review_ID] INTEGER PRIMARY KEY AUTOINCREMENT, [user_ID] BIGINT NOT NULL, [art_ID] BIGINT NOT NULL, [text] TEXT NOT NULL, "+
+		"[timestamp] BIGINT NOT NULL, [upvotes] BIGINT NOT NULL)", protocol.ReviewTableName)); err != nil {
 		return err
 	}
 	return nil
 }
 
 // PutReview stores a review in the review table
-func (p *Protocol) PutReview(ctx context.Context, tx *sql.Tx, review *protocol.Review) error {
-	insertQuery := fmt.Sprintf("INSERT INTO %s (review_ID, user_ID, art_ID, [text], timestamp, upvotes) "+
-		"VALUES (?, ?, ?, ?, ?, ?)", protocol.ReviewTableName)
-	if _, err := tx.Exec(insertQuery, review.ReviewID, review.UserID, review.ArtID, review.Text,
-		review.TimeStamp, review.Upvotes); err != nil {
-		return err
+func (p *Protocol) PutReview(ctx context.Context, reviewInput *protocol.ReviewInput) (*protocol.Review, error) {
+	insertQuery := fmt.Sprintf("INSERT INTO %s (user_ID, art_ID, [text], timestamp, upvotes) "+
+		"VALUES (?, ?, ?, ?, ?)", protocol.ReviewTableName)
+
+	if err := p.Store.Transact(func(tx *sql.Tx) error {
+		if _, err := tx.Exec(insertQuery, reviewInput.UserID, reviewInput.ArtID, reviewInput.Text,
+			reviewInput.TimeStamp, reviewInput.Upvotes); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
-	return nil
+
+	getQuery := fmt.Sprintf("SELECT MAX(review_ID) FROM %s", protocol.ReviewTableName)
+
+	stmt, err := p.Store.GetDB().Prepare(getQuery)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to prepare get query")
+	}
+
+	var reviewID uint64
+	if err = stmt.QueryRow().Scan(&reviewID); err != nil {
+		return nil, errors.Wrap(err, "failed to execute get query")
+	}
+	return &protocol.Review{
+		ReviewID:  reviewID,
+		UserID:    reviewInput.UserID,
+		ArtID:     reviewInput.ArtID,
+		Text:      reviewInput.Text,
+		TimeStamp: reviewInput.TimeStamp,
+		Upvotes:   reviewInput.Upvotes,
+	}, nil
 }
 
 // GetReview fetches a review from the review table
